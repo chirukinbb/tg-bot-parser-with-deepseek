@@ -8,6 +8,21 @@ import axios from 'axios'
 
 export const deepSeekRequest = async (prompt, index = 0) => {
   try {
+    const res = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+      model: 'deepseek/deepseek-r1:free',
+      messages: [{ role: 'user', content: prompt }]
+    }, {
+      headers: {
+        'Authorization': 'Bearer ' + process.env.OPENROUTER_KEY,
+        'Content-Type': 'application/json'
+      },
+    })
+    console.log(index, res.data.choices?.[0]?.message?.content, 25)
+    if (res.data.choices?.[0]?.message?.content.length > 0) {
+      console.log('free')
+      return res.data.choices?.[0]?.message?.content
+    }
+
     const response = await axios.post(
       'https://api.deepseek.com/chat/completions',
       {
@@ -26,10 +41,10 @@ export const deepSeekRequest = async (prompt, index = 0) => {
     )
 
     log(
-      '-deepseek-' +
+      '-deepseek-\n' +
       response.data.choices[0].message.content +
 
-      '-deepseek-'
+      '\n-deepseek-'
     )
 
     return response.data.choices[0].message.content
