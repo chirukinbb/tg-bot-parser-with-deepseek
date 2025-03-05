@@ -1,27 +1,28 @@
-import { __dirname, connectDB, deepSeekRequest, delay, post2TGg } from './functions.js'
-import { politicoArticles } from './politico.js'
-import { dwArticles } from './dw.js'
+import { __dirname, connectDB, deepSeekRequest, delay, getSecondLevelDomain, post2TGg, scanDir } from './functions.js'
 import * as fs from 'fs'
 import path from 'path'
-import axios from 'axios'
-import { JSDOM } from 'jsdom'
 import FbService from './FbService.js'
 import cron from 'node-cron'
 
 const connection = await connectDB()
+const models = await scanDir('./sources')
 
 const server = async () => {
   console.log(new Date())
 
-  const articles = (await dwArticles())
-    .concat(await politicoArticles())
+  const articles = []
+
+  for (const m of models) {
+    const s = (await import('./sources/' + m)).default
+    articles.push(...(await s.links()))
+  }
   console.log('-------------------------------')
 
   let list
-  if (articles.length > 3) {
+  if (articles.length > 3333) {
     const prompt = fs.readFileSync(path.join(__dirname, './prompt0.txt')).toString().replace('*список*', articles.map(a => a.title + '(' + a.source + ')').join('\n'))
     console.log(prompt)
-    list = (await deepSeekRequest(prompt)).split('-list-').pop().split('-/list-')[0].split('\n').filter(l => l.length)
+    list = (await deepSeekRequest(prompt)).split('-list-').pop().split('-/list-')[0].split('\n').filter(l => l.length > 0)
     console.log(list, 'links array')
   } else list = articles.map(a => a.source)
 
@@ -31,38 +32,22 @@ const server = async () => {
   async function fetchPosts () {
     for (const item of list) {
       try {
-        console.log(item)
-        const { data } = await axios.get(item)
-        const dom = new JSDOM(data)
-        let src
-
-        let selector = ''
-        if (item.includes('dw.com')) {
-          src = Array.from(dom.window.document.querySelectorAll('source')).map(s => s.getAttribute('srcset')).filter(l => l).pop().split(',').pop().split(' ').filter(l => l.includes('https'))[0]
-          selector = '.cc0m0op.s1ebneao.rich-text.t1it8i9i.r1wgtjne.wgx1hx2.b1ho1h07'
-        } else {
-          selector = '.article'
-          src = dom.window.document.querySelector('.sidebar-grid__container img').getAttribute('src')
-        }
-
-        const element = dom.window.document.querySelector(selector)
-        images.push(src)
-
-        if (!element) {
-          console.error(`Селектор не найден: ${selector} на ${item}`)
-          continue
-        }
-
-        const content = `-article-\n${item} - ссылка на источник\n${element.textContent.trim()}\n-/article-`
+        const model = (await import('./sources/' + getSecondLevelDomain(item) + '.js')).default
+        const page = await model.page(item)
+        console.log(page, 37)
+        const content = `-article-\n${item} - ссылка на источник\n${page.content.trim()}\n-/article-`
         posts.push(content)
+        images.push(page.image)
       } catch (error) {
         console.error(`Ошибка при загрузке ${item}:`, error)
       }
     }
   }
 
-  console.log('++++++++++++++++++++++++++++++++++++++++')
   await fetchPosts()
+
+  process.exit()
+  console.log('++++++++++++++++++++++++++++++++++++++++')
   await delay(10000)
   console.log('++++++++++++++POSTS++++++++++++++++')
   console.log(posts, 160)
@@ -121,3 +106,5 @@ const queue = async () => {
 cron.schedule('0 */2 * * *', () => queue())
 
 cron.schedule('0 3,9,15,21 * * *', () => server())
+
+server()

@@ -117,3 +117,41 @@ export const log = text => {
 export const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms))
+
+export const scanDir = async (dir) => {
+  try {
+    const items = await fs.promises.readdir(dir)
+    const files = []
+
+    for (const item of items) {
+      const itemPath = path.join(dir, item)
+      const stat = await fs.promises.stat(itemPath)
+      if (stat.isFile()) {
+        files.push(item)
+      }
+    }
+    return files
+  } catch (err) {
+    console.error('Ошибка:', err)
+  }
+}
+
+export const getSecondLevelDomain = (url) => {
+  try {
+    // Преобразуем в URL-объект (если передан полный URL)
+    const hostname = new URL(url.includes('://') ? url : `https://${url}`).hostname
+
+    // Разбиваем хост на части
+    const parts = hostname.split('.')
+
+    // Домен второго уровня — это предпоследний элемент
+    if (parts.length >= 2) {
+      return parts[parts.length - 2]
+    }
+
+    return null
+  } catch (error) {
+    console.error('Ошибка обработки URL:', error)
+    return null
+  }
+}
