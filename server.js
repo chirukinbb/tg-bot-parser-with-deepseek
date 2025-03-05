@@ -1,4 +1,4 @@
-import { __dirname, connectDB, deepSeekRequest, delay, getSecondLevelDomain, post2TGg, scanDir } from './functions.js'
+import { __dirname, connectDB, deepSeekRequest, getSecondLevelDomain, post2TGg, scanDir } from './functions.js'
 import * as fs from 'fs'
 import path from 'path'
 import FbService from './FbService.js'
@@ -16,10 +16,9 @@ const server = async () => {
     const s = (await import('./sources/' + m)).default
     articles.push(...(await s.links()))
   }
-  console.log('-------------------------------')
 
   let list
-  if (articles.length > 3333) {
+  if (articles.length > 3) {
     const prompt = fs.readFileSync(path.join(__dirname, './prompt0.txt')).toString().replace('*список*', articles.map(a => a.title + '(' + a.source + ')').join('\n'))
     console.log(prompt)
     list = (await deepSeekRequest(prompt)).split('-list-').pop().split('-/list-')[0].split('\n').filter(l => l.length > 0)
@@ -34,7 +33,6 @@ const server = async () => {
       try {
         const model = (await import('./sources/' + getSecondLevelDomain(item) + '.js')).default
         const page = await model.page(item)
-        console.log(page, 37)
         const content = `-article-\n${item} - ссылка на источник\n${page.content.trim()}\n-/article-`
         posts.push(content)
         images.push(page.image)
@@ -46,22 +44,14 @@ const server = async () => {
 
   await fetchPosts()
 
-  process.exit()
-  console.log('++++++++++++++++++++++++++++++++++++++++')
-  await delay(10000)
-  console.log('++++++++++++++POSTS++++++++++++++++')
-  console.log(posts, 160)
-  console.log('++++++++++++++++POSTS++++++++++++++++++++++++')
   const prompt2 = fs.readFileSync(path.join(__dirname, './prompt5.txt')).toString().replace('{content}', posts.join('\n')).replace('{date}', String(new Date()))
 
   const result = (await deepSeekRequest(prompt2))
-  console.log(result, 165)
 
   const articles1 = result.split('*статьи*').pop().split('*/статьи*')[0].split('*статьи*\n').pop().split('*/статьи*')[0]
     .split('*статья*').filter(a => a.length > 100)
 
   for (let i = 0; i < articles1.length; i++) {
-    console.log(articles1[i].split('*/статья*'))
     let a = articles1[i].split('*/статья*')[0]
     await connection.collection('articles').insertOne({ content: a, image: images[i] })
   }
@@ -106,5 +96,3 @@ const queue = async () => {
 cron.schedule('0 */2 * * *', () => queue())
 
 cron.schedule('0 3,9,15,21 * * *', () => server())
-
-server()
