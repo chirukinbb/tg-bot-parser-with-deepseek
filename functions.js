@@ -6,6 +6,8 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import axios from 'axios'
 
+console.log(process.env.MONGO_LINK)
+//process.exit()
 export const deepSeekRequest = async (prompt, index = 0) => {
   try {
     const res = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
@@ -51,36 +53,6 @@ export const deepSeekRequest = async (prompt, index = 0) => {
   } catch (error) {
     console.error('Error:', error.response ? error.response.data : error.message)
   }
-
-  // const models = [
-  //   'deepseek/deepseek-r1:free',
-  //   'deepseek/deepseek-r1',
-  //   'deepseek/deepseek-r1-distill-qwen-70b',
-  //   'deepseek/deepseek-r1-distill-qwen-32b'
-  // ]
-  //
-  // while (index < models.length) {
-  //   try {
-  //     const res = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
-  //       model: models[index],
-  //       messages: [{ role: 'user', content: prompt }]
-  //     }, {
-  //       headers: {
-  //         'Authorization': 'Bearer ' + process.env.OPENROUTER_KEY,
-  //         'Content-Type': 'application/json'
-  //       },
-  //     })
-  //     console.log(index, res.data.choices?.[0]?.message?.content, 25)
-  //     if (res.data.choices?.[0]?.message?.content.length > 0) {
-  //       return res.data.choices?.[0]?.message?.content ?? null
-  //     }
-  //   } catch (error) {
-  //     console.error(`Ошибка при запросе к модели ${models[index]}:`, error.message)
-  //   }
-  //
-  //   index++ // Переключаемся на следующую модель
-  // }
-  // return null // Если ни одна модель не вернула ответ
 }
 
 export const connectDB = async () => {
@@ -104,8 +76,10 @@ export const post2TGg = async (post, token, username) => {
         parse_mode: 'HTML'
       }
     )
+    console.log('ptg published', new Date())
   } catch (e) {
 
+    console.log(new Date(), ' tg')
     console.log(e)
     log(e)
   }

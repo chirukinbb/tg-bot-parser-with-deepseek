@@ -79,9 +79,11 @@ export default class FbService {
         }
       )
 
+      console.log(new Date(), ' fb')
       console.log('Пост опубликован:', response.data)
       return true
     } catch (error) {
+      console.log(new Date(), ' fb')
       console.log(error)
       log('Ошибка при публикации ФБ' +
         '')
